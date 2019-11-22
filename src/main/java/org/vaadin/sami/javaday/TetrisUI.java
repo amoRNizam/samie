@@ -1,6 +1,7 @@
 package org.vaadin.sami.javaday;
 
 import com.vaadin.icons.VaadinIcons;
+import com.vaadin.ui.*;
 import org.vaadin.hezamu.canvas.Canvas;
 import org.vaadin.sami.tetris.Game;
 import org.vaadin.sami.tetris.Grid;
@@ -14,12 +15,8 @@ import com.vaadin.annotations.VaadinServletConfiguration;
 import com.vaadin.event.ShortcutAction.KeyCode;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
-import com.vaadin.ui.Button;
-import com.vaadin.ui.Label;
-import com.vaadin.ui.Notification;
 import com.vaadin.ui.Notification.Type;
-import com.vaadin.ui.UI;
-import com.vaadin.ui.VerticalLayout;
+
 import javax.servlet.annotation.WebServlet;
 
 import org.vaadin.viritin.button.PrimaryButton;
@@ -66,6 +63,28 @@ public class TetrisUI extends UI {
         setContent(layout);
 
         layout.addComponent(new About());
+
+        //********* ЗДЕСЬ БУДЕТ ВЫГРУЗКА ПАПОК В СПИСОК *****************
+        TwinColSelect<String> select = new TwinColSelect<>("Select Targets");
+
+        // Put some items in the select
+        select.setItems("Mercury", "Venus", "Earth", "Mars",
+                "Jupiter", "Saturn", "Uranus", "Neptune");
+
+        // Few items, so we can set rows to match item count
+//        select.setRows(select.size());
+
+        // Preselect a few items
+        select.select("Venus", "Earth", "Mars");
+
+        // Handle value changes
+        select.addSelectionListener(event ->
+                layout.addComponent(
+                        new Label("Selected: " + event.getNewSelection())));
+        //***************************************************************************
+
+        setContent(layout);
+        layout.addComponent(select);
 
         // Button for moving left
         final Button leftBtn = new Button(VaadinIcons.ARROW_LEFT);

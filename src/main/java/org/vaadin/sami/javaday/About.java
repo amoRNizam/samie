@@ -11,7 +11,7 @@ import org.vaadin.viritin.label.RichText;
 public class About extends DisclosurePanel {
 
     public About() {
-        setCaption("Server side Tetris game? Read more »");
+        setCaption("Не знаешь как пользоваться программой? Читай дальше »");
         setContent(new RichText().withMarkDownResource("/about.md"));
     }
 
