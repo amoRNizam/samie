@@ -65,7 +65,7 @@ public class TetrisUI extends UI {
         layout.addComponent(new About());
 
         //********* ЗДЕСЬ БУДЕТ ВЫГРУЗКА ПАПОК В СПИСОК *****************
-        TwinColSelect<String> select = new TwinColSelect<>("Select Targets");
+        TwinColSelect<String> select = new TwinColSelect<>("Выбор тестов для замены эталонов");
 
         // Put some items in the select
         select.setItems("Mercury", "Venus", "Earth", "Mars",
