@@ -2,6 +2,12 @@ package org.vaadin.sami.javaday;
 
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.ui.*;
+import com.vaadin.v7.ui.Field;
+import com.vaadin.v7.ui.Form;
+import com.vaadin.v7.ui.Tree;
+import org.vaadin.filesystemdataprovider.FileTypeResolver;
+import org.vaadin.filesystemdataprovider.FilesystemData;
+import org.vaadin.filesystemdataprovider.FilesystemDataProvider;
 import org.vaadin.hezamu.canvas.Canvas;
 import org.vaadin.sami.tetris.Game;
 import org.vaadin.sami.tetris.Grid;
@@ -18,9 +24,18 @@ import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.Notification.Type;
 
 import javax.servlet.annotation.WebServlet;
+import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 
 import org.vaadin.viritin.button.PrimaryButton;
 import org.vaadin.viritin.layouts.MHorizontalLayout;
+
+import java.io.File;
+import java.io.OutputStream;
+import java.util.Date;
+import java.util.List;
+
+import static org.vaadin.sami.rk7.GetFailTestFrimSystem.showChildrenRes;
 
 @Push
 @Theme("valo")
@@ -55,6 +70,13 @@ public class TetrisUI extends UI {
 
     private Label scoreLabel;
 
+    //---------RK7---------
+    public static FileSystemView fileSystemView;
+    public static List listFile;
+    public static TextField resultDirPath;
+
+    //---------------------
+
     @Override
     protected void init(VaadinRequest request) {
         layout = new VerticalLayout();
@@ -64,7 +86,19 @@ public class TetrisUI extends UI {
 
         layout.addComponent(new About());
 
+        //*** RK7 *****************************************************************
+        //--- РАСПОЛОЖЕНИЕ (горизонтальная панель)
+        HorizontalLayout settingsPanel = new HorizontalLayout();
+        settingsPanel.addStyleName("outlined");
+        settingsPanel.setSpacing(false);
+        settingsPanel.setMargin(false);
+        settingsPanel.setSizeFull();
+        layout.addComponent(settingsPanel);
+
         //********* ЗДЕСЬ БУДЕТ ВЫГРУЗКА ПАПОК В СПИСОК *****************
+        fileSystemView = FileSystemView.getFileSystemView();
+
+
         TwinColSelect<String> select = new TwinColSelect<>("Выбор тестов для замены эталонов");
 
         // Put some items in the select
@@ -81,10 +115,101 @@ public class TetrisUI extends UI {
         select.addSelectionListener(event ->
                 layout.addComponent(
                         new Label("Selected: " + event.getNewSelection())));
-        //***************************************************************************
+
+        // КНОПКИ
+        Button btnUploadFTest = new Button("Загрузить fail-тесты");
+        btnUploadFTest.addClickListener(event -> {
+            Notification.show("The button was clicked", Type.TRAY_NOTIFICATION);
+            System.out.println("123");
+            showChildrenRes("E:\\TEST");
+            // запоним список fail-тетсов
+            select.clear();
+            select.setItems(listFile);
+                });
+        settingsPanel.addComponent(btnUploadFTest);
+
+        Button btnChooseResultDir = new Button("выбрать");
+        btnChooseResultDir.addClickListener(event -> {
+            Notification.show("The button was clicked", Type.TRAY_NOTIFICATION);
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Выбор директории проекта");
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            chooser.setAcceptAllFileFilterUsed(false);
+//            int result = chooser.showOpenDialog(new FileChooserTest());
+//            int result = chooser.showOpenDialog();
+//            if (result == JFileChooser.APPROVE_OPTION) {
+//                System.out.println(chooser.getSelectedFile());
+//                resultDirPath.setValue(chooser.getSelectedFile().getAbsolutePath());
+//            }
+        });
+        //-##########################################################################
+
+
+//        final Window window = new Window("Window");
+//        window.setWidth(300.0f, Unit.PIXELS);
+//        final FormLayout content = new FormLayout();
+//        content.setMargin(true);
+//        window.setContent(content);
+//
+//        layout.getUI().getUI().addWindow(window);
+
+        settingsPanel.addComponent(btnChooseResultDir);
+
+        LineBreakCounter lineBreakCounter = new LineBreakCounter();
+        lineBreakCounter.setSlow(true);
+
+        Upload sample = new Upload("123", lineBreakCounter);
+        sample.setImmediateMode(false);
+        sample.setButtonCaption("Upload File");
+
+        UploadInfoWindow uploadInfoWindow = new UploadInfoWindow(sample, lineBreakCounter);
+
+        sample.addStartedListener(event -> {
+            if (uploadInfoWindow.getParent() == null) {
+                UI.getCurrent().addWindow(uploadInfoWindow);
+            }
+            uploadInfoWindow.setClosable(false);
+        });
+        sample.addFinishedListener(event -> uploadInfoWindow.setClosable(true));
+        settingsPanel.addComponent(sample);
+
+
+
+        File rootFile3 = new File("C:/");
+        FileSelect fileSelect = new FileSelect(rootFile3);
+        fileSelect.addValueChangeListener(event -> {
+            File file = fileSelect.getValue();
+            Date date = new Date(file.lastModified());
+            if (!file.isDirectory()) {
+                Notification.show(file.getPath()+", "+date+", "+file.length());
+            } else {
+                Notification.show(file.getPath()+", "+date);
+            }
+        });
+        tabSheet.addTab(fileSelect,"FileSelect demo");
+
+        setContent(tabSheet);
+
+
+
+        final Panel layout1 = new Panel();
+        layout1.setSizeFull();
+        layout1.setContent(tree);
+        //-##########################################################################
+
+        // ПОЛЯ
+        resultDirPath = new TextField();
+        resultDirPath.setPlaceholder("Write something");
+        resultDirPath.setMaxLength(10);
+        settingsPanel.addComponent(resultDirPath);
+        //---------------
 
         setContent(layout);
         layout.addComponent(select);
+
+
+        // **************************************************************************
+        // ДАЛЬШЕ ТЕТРИС ------------------------------------------------------------
 
         // Button for moving left
         final Button leftBtn = new Button(VaadinIcons.ARROW_LEFT);
