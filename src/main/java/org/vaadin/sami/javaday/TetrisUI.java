@@ -1,13 +1,13 @@
 package org.vaadin.sami.javaday;
 
+import com.sun.org.apache.xerces.internal.xs.StringList;
 import com.vaadin.icons.VaadinIcons;
+import com.vaadin.server.*;
 import com.vaadin.ui.*;
-import com.vaadin.v7.ui.Field;
-import com.vaadin.v7.ui.Form;
-import com.vaadin.v7.ui.Tree;
-import org.vaadin.filesystemdataprovider.FileTypeResolver;
-import org.vaadin.filesystemdataprovider.FilesystemData;
-import org.vaadin.filesystemdataprovider.FilesystemDataProvider;
+import com.vaadin.ui.Button;
+import com.vaadin.ui.Image;
+import com.vaadin.ui.Label;
+import com.vaadin.ui.TextField;
 import org.vaadin.hezamu.canvas.Canvas;
 import org.vaadin.sami.tetris.Game;
 import org.vaadin.sami.tetris.Grid;
@@ -19,21 +19,18 @@ import com.vaadin.annotations.Theme;
 import com.vaadin.annotations.Title;
 import com.vaadin.annotations.VaadinServletConfiguration;
 import com.vaadin.event.ShortcutAction.KeyCode;
-import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.Notification.Type;
 
 import javax.servlet.annotation.WebServlet;
-import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
 
 import org.vaadin.viritin.button.PrimaryButton;
 import org.vaadin.viritin.layouts.MHorizontalLayout;
 
 import java.io.File;
-import java.io.OutputStream;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.vaadin.sami.rk7.GetFailTestFrimSystem.showChildrenRes;
 
@@ -72,13 +69,17 @@ public class TetrisUI extends UI {
 
     //---------RK7---------
     public static FileSystemView fileSystemView;
-    public static List listFile;
+    public static ArrayList<File> listFile = new ArrayList<>();
     public static TextField resultDirPath;
 
     //---------------------
 
     @Override
     protected void init(VaadinRequest request) {
+        // Find the application directory
+        String basepath = VaadinService.getCurrent()
+                .getBaseDirectory().getAbsolutePath();
+
         layout = new VerticalLayout();
         layout.setSpacing(true);
         layout.setMargin(true);
@@ -95,52 +96,79 @@ public class TetrisUI extends UI {
         settingsPanel.setSizeFull();
         layout.addComponent(settingsPanel);
 
+        //--- РАСПОЛОЖЕНИЕ (вертикальная панель)
+        HorizontalLayout generalPanel = new HorizontalLayout();
+        generalPanel.setMargin(true);
+        generalPanel.setSpacing(true);
+        generalPanel.addStyleName("outlined");
+        generalPanel.setHeight(100.0f, Unit.PERCENTAGE);
+        layout.addComponent(generalPanel);
+//        layout.setComponentAlignment(generalPanel, Alignment.BOTTOM_RIGHT);
+
+        //*********************ИЗОБРАЖЕНИЯ ******************************
+
+        // Serve the image from the theme
+        Resource res = new FileResource(
+                new File(basepath + "\\WEB-INF\\images\\difference_scr1.png"));
+        Resource res2 = new FileResource(
+                new File(basepath + "\\WEB-INF\\images\\scr1.bmp"));
+
+        // Display the image without caption
+        Image image = new Image();
+        image.setHeight("500");
+        image.setWidth("600");
+        image.setSource(res);
+
+//        generalPanel.addComponent(image);
+//        generalPanel.setComponentAlignment(image, Alignment.BOTTOM_RIGHT);
+
         //********* ЗДЕСЬ БУДЕТ ВЫГРУЗКА ПАПОК В СПИСОК *****************
         fileSystemView = FileSystemView.getFileSystemView();
 
+        TwinColSelect<String> listFailTest = new TwinColSelect<>();
+        listFailTest.setWidth("350");
+        listFailTest.setHeight("525");
+        showChildrenRes("D:\\TestingResult_19.11.2019_01.03.56");
+        listFailTest.setRightColumnCaption("Для отладки");
+        listFailTest.setLeftColumnCaption("Все упавшие тесты");
 
-        TwinColSelect<String> select = new TwinColSelect<>("Выбор тестов для замены эталонов");
-
-        // Put some items in the select
-        select.setItems("Mercury", "Venus", "Earth", "Mars",
-                "Jupiter", "Saturn", "Uranus", "Neptune");
+        // Put some items in the listFailTest
+//            listFailTest.setItems("1", "2", "3");
 
         // Few items, so we can set rows to match item count
-//        select.setRows(select.size());
+//        listFailTest.setRows(listFailTest.size());
 
-        // Preselect a few items
-        select.select("Venus", "Earth", "Mars");
+//         Preselect a few items
+//        listFailTest.select("4", "5", "6");
 
         // Handle value changes
-        select.addSelectionListener(event ->
+        listFailTest.addSelectionListener(event ->
                 layout.addComponent(
                         new Label("Selected: " + event.getNewSelection())));
+        generalPanel.addComponent(listFailTest);
+        generalPanel.setComponentAlignment(listFailTest, Alignment.BOTTOM_LEFT);
+
+        generalPanel.addComponent(image);
+        generalPanel.setComponentAlignment(image, Alignment.BOTTOM_RIGHT);
+
 
         // КНОПКИ
         Button btnUploadFTest = new Button("Загрузить fail-тесты");
         btnUploadFTest.addClickListener(event -> {
             Notification.show("The button was clicked", Type.TRAY_NOTIFICATION);
             System.out.println("123");
-            showChildrenRes("E:\\TEST");
+            showChildrenRes("D:\\TestingResult_19.11.2019_01.03.56");
             // запоним список fail-тетсов
-            select.clear();
-            select.setItems(listFile);
+            ArrayList<String> s = new ArrayList<>();
+            listFile.forEach(x -> s.add(x.getName()));
+            listFailTest.setItems(s);
                 });
         settingsPanel.addComponent(btnUploadFTest);
 
         Button btnChooseResultDir = new Button("выбрать");
         btnChooseResultDir.addClickListener(event -> {
             Notification.show("The button was clicked", Type.TRAY_NOTIFICATION);
-            JFileChooser chooser = new JFileChooser();
-            chooser.setDialogTitle("Выбор директории проекта");
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            chooser.setAcceptAllFileFilterUsed(false);
-//            int result = chooser.showOpenDialog(new FileChooserTest());
-//            int result = chooser.showOpenDialog();
-//            if (result == JFileChooser.APPROVE_OPTION) {
-//                System.out.println(chooser.getSelectedFile());
-//                resultDirPath.setValue(chooser.getSelectedFile().getAbsolutePath());
-//            }
+            image.setSource(res2);
         });
         //-##########################################################################
 
@@ -155,46 +183,46 @@ public class TetrisUI extends UI {
 
         settingsPanel.addComponent(btnChooseResultDir);
 
-        LineBreakCounter lineBreakCounter = new LineBreakCounter();
-        lineBreakCounter.setSlow(true);
-
-        Upload sample = new Upload("123", lineBreakCounter);
-        sample.setImmediateMode(false);
-        sample.setButtonCaption("Upload File");
-
-        UploadInfoWindow uploadInfoWindow = new UploadInfoWindow(sample, lineBreakCounter);
-
-        sample.addStartedListener(event -> {
-            if (uploadInfoWindow.getParent() == null) {
-                UI.getCurrent().addWindow(uploadInfoWindow);
-            }
-            uploadInfoWindow.setClosable(false);
-        });
-        sample.addFinishedListener(event -> uploadInfoWindow.setClosable(true));
-        settingsPanel.addComponent(sample);
-
-
-
-        File rootFile3 = new File("C:/");
-        FileSelect fileSelect = new FileSelect(rootFile3);
-        fileSelect.addValueChangeListener(event -> {
-            File file = fileSelect.getValue();
-            Date date = new Date(file.lastModified());
-            if (!file.isDirectory()) {
-                Notification.show(file.getPath()+", "+date+", "+file.length());
-            } else {
-                Notification.show(file.getPath()+", "+date);
-            }
-        });
-        tabSheet.addTab(fileSelect,"FileSelect demo");
-
-        setContent(tabSheet);
+//        LineBreakCounter lineBreakCounter = new LineBreakCounter();
+//        lineBreakCounter.setSlow(true);
+//
+//        Upload sample = new Upload("123", lineBreakCounter);
+//        sample.setImmediateMode(false);
+//        sample.setButtonCaption("Upload File");
+//
+//        UploadInfoWindow uploadInfoWindow = new UploadInfoWindow(sample, lineBreakCounter);
+//
+//        sample.addStartedListener(event -> {
+//            if (uploadInfoWindow.getParent() == null) {
+//                UI.getCurrent().addWindow(uploadInfoWindow);
+//            }
+//            uploadInfoWindow.setClosable(false);
+//        });
+//        sample.addFinishedListener(event -> uploadInfoWindow.setClosable(true));
+//        settingsPanel.addComponent(sample);
 
 
 
-        final Panel layout1 = new Panel();
-        layout1.setSizeFull();
-        layout1.setContent(tree);
+//        File rootFile3 = new File("C:/");
+//        FileSelect fileSelect = new FileSelect(rootFile3);
+//        fileSelect.addValueChangeListener(event -> {
+//            File file = fileSelect.getValue();
+//            Date date = new Date(file.lastModified());
+//            if (!file.isDirectory()) {
+//                Notification.show(file.getPath()+", "+date+", "+file.length());
+//            } else {
+//                Notification.show(file.getPath()+", "+date);
+//            }
+//        });
+//        tabSheet.addTab(fileSelect,"FileSelect demo");
+//
+//        setContent(tabSheet);
+//
+//
+//
+//        final Panel layout1 = new Panel();
+//        layout1.setSizeFull();
+//        layout1.setContent(tree);
         //-##########################################################################
 
         // ПОЛЯ
@@ -205,7 +233,6 @@ public class TetrisUI extends UI {
         //---------------
 
         setContent(layout);
-        layout.addComponent(select);
 
 
         // **************************************************************************
